@@ -25,15 +25,15 @@ async fn redirect() -> impl IntoResponse {
 }
 
 #[derive(Deserialize)]
-struct IPParam {
-    from: String,
-    key: String,
+struct IPParam<T> {
+    from: T,
+    key: T,
 }
 
 #[derive(Deserialize)]
-struct KeyParam {
-    from: String,
-    to: String,
+struct KeyParam<T> {
+    from: T,
+    to: T,
 }
 
 fn add_ipv4_octets(ip1: Ipv4Addr, ip2: Ipv4Addr) -> Ipv4Addr {
@@ -75,71 +75,37 @@ fn xor_ipv6(ip1: Ipv6Addr, ip2: Ipv6Addr) -> Ipv6Addr {
     Ipv6Addr::from(result)
 }
 
-async fn get_to_ipv4(ip_param: Query<IPParam>) -> impl IntoResponse {
-    let from = match ip_param.from.parse::<Ipv4Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let key = match ip_param.key.parse::<Ipv4Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
+async fn get_to_ipv4(ip_param: Query<IPParam<Ipv4Addr>>) -> impl IntoResponse {
     Response::builder()
         .status(StatusCode::OK)
-        .body(Body::from(add_ipv4_octets(from, key).to_string()))
+        .body(Body::from(
+            add_ipv4_octets(ip_param.from, ip_param.key).to_string(),
+        ))
         .unwrap()
 }
 
-async fn get_key_ipv4(ip_param: Query<KeyParam>) -> impl IntoResponse {
-    let from = match ip_param.from.parse::<Ipv4Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let to = match ip_param.to.parse::<Ipv4Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
+async fn get_key_ipv4(ip_param: Query<KeyParam<Ipv4Addr>>) -> impl IntoResponse {
     Response::builder()
         .status(StatusCode::OK)
-        .body(Body::from(subtract_ipv4_octets(to, from).to_string()))
+        .body(Body::from(
+            subtract_ipv4_octets(ip_param.to, ip_param.from).to_string(),
+        ))
         .unwrap()
 }
 
-async fn get_to_ipv6(ip_param: Query<IPParam>) -> impl IntoResponse {
-    let from = match ip_param.from.parse::<Ipv6Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let key = match ip_param.key.parse::<Ipv6Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
+async fn get_to_ipv6(ip_param: Query<IPParam<Ipv6Addr>>) -> impl IntoResponse {
     Response::builder()
         .status(StatusCode::OK)
-        .body(Body::from(xor_ipv6(from, key).to_string()))
+        .body(Body::from(
+            xor_ipv6(ip_param.from, ip_param.key).to_string(),
+        ))
         .unwrap()
 }
 
-async fn get_key_ipv6(ip_param: Query<KeyParam>) -> impl IntoResponse {
-    let from = match ip_param.from.parse::<Ipv6Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let to = match ip_param.to.parse::<Ipv6Addr>() {
-        Ok(from) => from,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
+async fn get_key_ipv6(ip_param: Query<KeyParam<Ipv6Addr>>) -> impl IntoResponse {
     Response::builder()
         .status(StatusCode::OK)
-        .body(Body::from(xor_ipv6(to, from).to_string()))
+        .body(Body::from(xor_ipv6(ip_param.to, ip_param.from).to_string()))
         .unwrap()
 }
 
