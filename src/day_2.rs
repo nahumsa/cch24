@@ -19,25 +19,15 @@ pub struct KeyParam<T> {
     to: T,
 }
 
-fn add_ipv4_octets(ip1: Ipv4Addr, ip2: Ipv4Addr) -> Ipv4Addr {
+fn operate_over_ipv4<F>(ip1: Ipv4Addr, ip2: Ipv4Addr, operation: F) -> Ipv4Addr
+where
+    F: Fn(u8, u8) -> u8,
+{
     let result: [u8; 4] = ip1
         .octets()
         .iter()
         .zip(ip2.octets())
-        .map(|(a, b)| a.wrapping_add(b))
-        .collect::<Vec<u8>>()
-        .try_into()
-        .expect("expected a 4-byte tuple");
-
-    Ipv4Addr::from(result)
-}
-
-fn subtract_ipv4_octets(ip1: Ipv4Addr, ip2: Ipv4Addr) -> Ipv4Addr {
-    let result: [u8; 4] = ip1
-        .octets()
-        .iter()
-        .zip(ip2.octets())
-        .map(|(a, b)| a.wrapping_sub(b))
+        .map(|(&a, b)| operation(a, b))
         .collect::<Vec<u8>>()
         .try_into()
         .expect("expected a 4-byte tuple");
@@ -62,7 +52,10 @@ pub async fn get_to_ipv4(ip_param: Query<IPParam<Ipv4Addr>>) -> impl IntoRespons
     Response::builder()
         .status(StatusCode::OK)
         .body(Body::from(
-            add_ipv4_octets(ip_param.from, ip_param.key).to_string(),
+            operate_over_ipv4(ip_param.from, ip_param.key, |x: u8, y: u8| {
+                x.wrapping_add(y)
+            })
+            .to_string(),
         ))
         .unwrap()
 }
@@ -71,7 +64,8 @@ pub async fn get_key_ipv4(ip_param: Query<KeyParam<Ipv4Addr>>) -> impl IntoRespo
     Response::builder()
         .status(StatusCode::OK)
         .body(Body::from(
-            subtract_ipv4_octets(ip_param.to, ip_param.from).to_string(),
+            operate_over_ipv4(ip_param.to, ip_param.from, |x: u8, y: u8| x.wrapping_sub(y))
+                .to_string(),
         ))
         .unwrap()
 }
