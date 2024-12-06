@@ -12,3 +12,4 @@ serde = "1.0.215"
 toml = "0.8.19"
 axum-extra = { version = "0.9.6", features = ["typed-header"] }
 serde_with = "3.11.0"
+cargo-manifest = "0.17.0"

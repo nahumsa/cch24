@@ -1,36 +1,60 @@
+use std::fmt;
+
 use axum::response::IntoResponse;
 use axum_extra::headers::ContentType;
 use axum_extra::TypedHeader;
+use cargo_manifest::Manifest;
+use serde::Deserialize;
+use serde_with::serde_as;
 
-use crate::day_5::manifest_parser::{Manifest, Order};
+#[derive(Default, Deserialize)]
+struct Metadata {
+    #[serde(default)]
+    pub orders: Vec<Order>,
+}
+
+#[serde_as]
+#[derive(Deserialize, Debug)]
+struct Order {
+    pub item: String,
+    #[serde_as(deserialize_as = "serde_with::DefaultOnError")]
+    #[serde(default)]
+    pub quantity: Option<u32>,
+}
+
+impl fmt::Display for Order {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.quantity {
+            Some(num) => write!(f, "{}: {:?}", self.item, num),
+            None => write!(f, ""),
+        }
+    }
+}
 
 pub async fn manifest_validation(
     TypedHeader(content_type_header): TypedHeader<ContentType>,
     body: String,
 ) -> impl IntoResponse {
     let content_type = content_type_header.to_string();
-    let mut return_body: Vec<Order> = Vec::new();
 
-    if content_type.starts_with("application/toml") {
-        match toml::from_str::<Manifest>(&body) {
-            Ok(manifest) => match manifest.package.metadata {
-                Some(metadata) => {
-                    return_body.extend(metadata.orders.into_iter());
-                }
-                None => {
-                    return (axum::http::StatusCode::NO_CONTENT,).into_response();
-                }
-            },
-
-            Err(_) => {
-                return (axum::http::StatusCode::NO_CONTENT,).into_response();
+    let manifest = match content_type.as_str() {
+        "application/toml" => {
+            if let Ok(manifest) = toml::from_str::<Manifest<Metadata>>(&body) {
+                manifest
+            } else {
+                return (axum::http::StatusCode::BAD_REQUEST, "Invalid manifest").into_response();
             }
         }
-    } else {
-        return (axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE,).into_response();
-    }
+        _ => return (axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE,).into_response(),
+    };
 
-    let formatted_orders: String = return_body
+    let metadata = match manifest.package.unwrap().metadata {
+        Some(metadata) => metadata,
+        None => return (axum::http::StatusCode::NO_CONTENT,).into_response(),
+    };
+
+    let formatted_orders: String = metadata
+        .orders
         .iter()
         .filter(|order| order.quantity.is_some())
         .map(|order| order.to_string())
