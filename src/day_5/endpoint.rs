@@ -45,10 +45,39 @@ pub async fn manifest_validation(
                 return (axum::http::StatusCode::BAD_REQUEST, "Invalid manifest").into_response();
             }
         }
+        "application/json" => {
+            if let Ok(manifest) = serde_json::from_str::<Manifest<Metadata>>(&body) {
+                manifest
+            } else {
+                return (axum::http::StatusCode::BAD_REQUEST, "Invalid manifest").into_response();
+            }
+        }
+        "application/yaml" => {
+            if let Ok(manifest) = serde_yaml::from_str::<Manifest<Metadata>>(&body) {
+                manifest
+            } else {
+                return (axum::http::StatusCode::BAD_REQUEST, "Invalid manifest").into_response();
+            }
+        }
         _ => return (axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE,).into_response(),
     };
 
-    let metadata = match manifest.package.unwrap().metadata {
+    let package = manifest.package.unwrap();
+
+    if !package
+        .keywords
+        .and_then(|k| k.as_local())
+        .map(|k| k.contains(&"Christmas 2024".to_string()))
+        .unwrap_or_default()
+    {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            "Magic keyword not provided",
+        )
+            .into_response();
+    }
+
+    let metadata = match package.metadata {
         Some(metadata) => metadata,
         None => return (axum::http::StatusCode::NO_CONTENT,).into_response(),
     };
