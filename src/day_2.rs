@@ -3,6 +3,8 @@ use axum::{
     extract::Query,
     http::{Response, StatusCode},
     response::IntoResponse,
+    routing::get,
+    Router,
 };
 use serde::Deserialize;
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -17,6 +19,14 @@ pub struct IPParam<T> {
 pub struct KeyParam<T> {
     from: T,
     to: T,
+}
+
+pub fn get_routes() -> Router {
+    Router::new()
+        .route("/2/dest", get(get_to_ipv4))
+        .route("/2/key", get(get_key_ipv4))
+        .route("/2/v6/dest", get(get_to_ipv6))
+        .route("/2/v6/key", get(get_key_ipv6))
 }
 
 fn operate_over_ipv4<F>(ip1: Ipv4Addr, ip2: Ipv4Addr, operation: F) -> Ipv4Addr

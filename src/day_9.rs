@@ -5,7 +5,8 @@ use axum::{
     extract::{Request, State},
     http::{header::CONTENT_TYPE, Response, StatusCode},
     response::IntoResponse,
-    Json, RequestExt,
+    routing::post,
+    Json, RequestExt, Router,
 };
 use leaky_bucket::RateLimiter;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,22 @@ pub struct UnitConverter {
     pints: Option<f32>,
     #[serde(default)]
     litres: Option<f32>,
+}
+
+pub fn get_routes() -> Router {
+    let limiter = Arc::new(Mutex::new(
+        RateLimiter::builder()
+            .initial(5)
+            .refill(1)
+            .max(5)
+            .interval(Duration::from_secs(1))
+            .build(),
+    ));
+
+    Router::new()
+        .route("/9/milk", post(leaky_milk))
+        .route("/9/refill", post(refill_milk))
+        .with_state(limiter)
 }
 
 impl UnitConverter {

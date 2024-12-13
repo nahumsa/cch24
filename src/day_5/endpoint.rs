@@ -1,11 +1,17 @@
 use std::fmt;
 
 use axum::response::IntoResponse;
+use axum::routing::post;
+use axum::Router;
 use axum_extra::headers::ContentType;
 use axum_extra::TypedHeader;
 use cargo_manifest::Manifest;
 use serde::Deserialize;
 use serde_with::serde_as;
+
+pub fn get_routes() -> Router {
+    Router::new().route("/5/manifest", post(manifest_validation))
+}
 
 #[derive(Default, Deserialize)]
 struct Metadata {
